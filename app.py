@@ -3,111 +3,93 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 
-# 1. SAAT VE SAYFA AYARI
 def tr_saati():
     return datetime.now(timezone.utc) + timedelta(hours=3)
 
-st.set_page_config(page_title="GME Analiz Pro", layout="wide")
+st.set_page_config(page_title="GME BIST 100", layout="wide")
 
-st.title("📊 GME-AI: 100 Hisse & Kâr Payı Analiz Sistemi")
-st.write(f"Kullanıcı: Görkem Mete | ⏰ Güncel Saat: {tr_saati().strftime('%H:%M:%S')}")
+st.title("📊 GME-AI: BIST 100 Tam Analiz")
+st.write(f"Kullanıcı: Görkem Mete | ⏰ {tr_saati().strftime('%H:%M:%S')}")
 
-# 2. BIST LİSTESİ (HATA VERMEMESİ İÇİN KONTROLLÜ LİSTE)
-bist_liste = [
-    "THYAO.IS", "TUPRS.IS", "ASELS.IS", "AKBNK.IS", "KCHOL.IS", "BIMAS.IS", "ISCTR.IS", "GARAN.IS", "SISE.IS", "SAHOL.IS",
-    "YKBNK.IS", "EREGL.IS", "PGSUS.IS", "TCELL.IS", "ARCLK.IS", "TOASO.IS", "FROTO.IS", "ASTOR.IS", "SASA.IS", "KONTR.IS",
-    "TUKAS.IS", "MIATK.IS", "EGEEN.IS", "DOAS.IS", "MGROS.IS", "PETKM.IS", "HALKB.IS", "VAKBN.IS", "ALARK.IS", "HEKTS.IS",
-    "ENJSA.IS", "MAVI.IS", "OTKAR.IS", "VESTL.IS", "BRSAN.IS", "ALFAS.IS", "GESAN.IS", "SAYAS.IS", "ZOREN.IS", "AGHOL.IS",
-    "DOCO.IS", "CWENE.IS", "EUPWR.IS", "YEOTK.IS", "SMRTG.IS", "BRYAT.IS", "KAYSE.IS", "ENERY.IS", "BIOEN.IS", "CIMSA.IS"
+# BIST 100 TAM LİSTE (100 HİSSE)
+bist_full = [
+    "AEFES.IS", "AGHOL.IS", "AHGAZ.IS", "AKBNK.IS", "AKCNS.IS", "AKFYE.IS", "AKSA.IS", "AKSEN.IS", "ALARK.IS", "ALFAS.IS",
+    "ANSGR.IS", "ARCLK.IS", "ASELS.IS", "ASTOR.IS", "ASUZU.IS", "AYDEM.IS", "BAGFS.IS", "BERA.IS", "BIENP.IS", "BIMAS.IS",
+    "BIOEN.IS", "BOBET.IS", "BRSAN.IS", "BRYAT.IS", "BUCIM.IS", "CANTE.IS", "CCOLA.IS", "CIMSA.IS", "CWENE.IS", "DOAS.IS",
+    "DOHOL.IS", "EBEBK.IS", "ECILC.IS", "ECZYT.IS", "EGEEN.IS", "EKGYO.IS", "ENERY.IS", "ENJSA.IS", "ENKAI.IS", "EREGL.IS",
+    "EUPWR.IS", "EUREN.IS", "FROTO.IS", "GARAN.IS", "GESAN.IS", "GUBRF.IS", "GWIND.IS", "HALKB.IS", "HEKTS.IS", "IPEKE.IS",
+    "ISCTR.IS", "ISGYO.IS", "ISMEN.IS", "IZENR.IS", "KARDM.IS", "KAYSE.IS", "KCHOL.IS", "KENT.IS", "KLSER.IS", "KONTR.IS",
+    "KORDS.IS", "KOZAA.IS", "KOZAL.IS", "KRDMD.IS", "KSRAC.IS", "MAVI.IS", "MGROS.IS", "MIATK.IS", "ODAS.IS", "OTKAR.IS",
+    "OYAKC.IS", "PENTA.IS", "PETKM.IS", "PGSUS.IS", "QUAGR.IS", "REEDR.IS", "SAHOL.IS", "SASA.IS", "SAYAS.IS", "SDTTR.IS",
+    "SISE.IS", "SKBNK.IS", "SMRTG.IS", "SNGYO.IS", "SOKM.IS", "TABGD.IS", "TAVHL.IS", "TCELL.IS", "THYAO.IS", "TKFEN.IS",
+    "TMSN.IS", "TOASO.IS", "TSKB.IS", "TUKAS.IS", "TUPRS.IS", "TURSG.IS", "ULKER.IS", "VAKBN.IS", "VESBE.IS", "VESTL.IS",
+    "YEOTK.IS", "YKBNK.IS", "ZOREN.IS"
 ]
 
-# 3. ANALİZ BUTONU
-if st.button('🚀 SİSTEMİ ÇALIŞTIR'):
-    with st.spinner('Piyasa taranıyor ve kâr payları hesaplanıyor...'):
+if st.button('🚀 100 HİSSEYİ TARAMAYI BAŞLAT'):
+    with st.spinner('BIST 100 radarı çalışıyor...'):
         sonuclar = []
-        basarili_isimler = []
-        basarisiz_isimler = []
+        basarili = []
+        beklemede = []
         
-        for h in bist_liste:
+        for h in bist_full:
             try:
                 t = yf.Ticker(h)
-                # Güvenli veri çekme (5 günlük geçmiş ve 15 dakikalık canlı veri)
-                df_g = t.history(period="5d")
-                
-                if df_g.empty or len(df_g) < 2:
-                    continue
-                
-                # Temettü Verimi (Kâr Payı)
-                # 'dividendYield' bazen None döner, o yüzden 0'a çekiyoruz
-                info = t.info
-                dy = info.get('dividendYield', 0)
-                kar_payi = f"%{round(dy * 100, 2)}" if dy else "%0.0"
+                # Hata almamak için sadece 2 günlük veriyi tek seferde çekiyoruz
+                hist = t.history(period="2d")
+                if hist.empty or len(hist) < 2: continue
 
-                su_an = df_g['Close'].iloc[-1]
-                dun = df_g['Close'].iloc[-2]
-                zirve = df_g['High'].iloc[-1]
-                
-                # RSI GÖSTERGESİ (14 Günlük)
-                delta = df_g['Close'].diff()
-                up = delta.clip(lower=0)
-                down = -1 * delta.clip(upper=0)
-                ema_up = up.rolling(window=14).mean()
-                ema_down = down.rolling(window=14).mean()
-                rs = ema_up / (ema_down + 1e-10)
-                rsi = 100 - (100 / (1 + rs.iloc[-1]))
+                # Temettü Verimi
+                dy = t.info.get('dividendYield', 0)
+                temettu = f"%{round(dy * 100, 2)}" if dy else "%0.0"
 
-                # HESAPLAMALAR
-                alis_noktasi = round(su_an * 0.998, 2)
-                hedef_satis = round(su_an * 1.035, 2) # %3.5 Kâr hedefi
+                su_an = hist['Close'].iloc[-1]
+                zirve = hist['High'].iloc[-1]
                 
-                # SİNYAL MANTIĞI (TUT dememesi için aralıklar daraltıldı)
-                if rsi < 42: sinyal = "🔥 AL"
-                elif rsi > 62: sinyal = "🚨 SAT"
+                # RSI Basitleştirilmiş (Hız için)
+                delta = hist['Close'].diff()
+                rsi_val = 50 # Veri yetersizse nötr kalsın
+                if len(delta) > 1:
+                    gain = delta.where(delta > 0, 0).mean()
+                    loss = -delta.where(delta < 0, 0).mean()
+                    if loss > 0:
+                        rs = gain / loss
+                        rsi_val = 100 - (100 / (1 + rs))
+
+                alis = round(su_an * 0.998, 2)
+                satis = round(su_an * 1.035, 2)
+                h_ad = h.replace(".IS", "")
+
+                # Sinyal & Başarı
+                if rsi_val < 40: sinyal = "🔥 AL"
+                elif rsi_val > 65: sinyal = "🚨 SAT"
                 else: sinyal = "⚖️ İZLE"
 
-                h_adi = h.replace(".IS", "")
-                
-                # BAŞARI KONTROLÜ
-                if zirve >= hedef_satis:
+                if zirve >= satis:
                     durum = "✅ BAŞARILI"
-                    basarili_isimler.append(h_adi)
+                    basarili.append(h_ad)
                 else:
                     durum = "⏳ BEKLEMEDE"
-                    basarisiz_isimler.append(h_adi)
+                    beklemede.append(h_ad)
 
                 sonuclar.append({
-                    "HİSSE": h_adi,
+                    "HİSSE": h_ad,
                     "GÜNCEL": round(su_an, 2),
-                    "ALIŞ": alis_noktasi,
-                    "HEDEF SATIŞ": hedef_satis,
-                    "KÂR PAYI": kar_payi,
+                    "ALIŞ": alis,
+                    "HEDEF SATIŞ": satis,
+                    "KÂR PAYI": temettu,
                     "SİNYAL": sinyal,
                     "DURUM": durum
                 })
-            except Exception:
-                continue # Hata veren hisseyi geç, sistemi durdurma
-        
-        if sonuclar:
-            # TABLO GÖSTERİMİ
-            st.dataframe(pd.DataFrame(sonuclar), use_container_width=True)
-            
-            st.divider()
-            
-            # ÖZET METRİKLER
-            toplam = len(sonuclar)
-            basarili_sayi = len(basarili_isimler)
-            oran = (basarili_sayi / toplam) * 100 if toplam > 0 else 0
-            
-            st.metric("📊 GÜNLÜK BAŞARI ORANI", f"%{round(oran, 2)}")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.success(f"✅ HEDEFE ULAŞANLAR ({basarili_sayi})")
-                st.write(", ".join(basarili_isimler))
-            with col2:
-                st.error(f"⏳ BEKLEYENLER ({len(basarisiz_isimler)})")
-                st.write(", ".join(basarisiz_isimler[:30]) + "...")
-        else:
-            st.error("Veri bağlantısı kurulamadı. Lütfen butona tekrar bas.")
+            except: continue
 
-st.sidebar.info("850 TL bütçe ile '🔥 AL' verenlere odaklan.")
+        if sonuclar:
+            st.dataframe(pd.DataFrame(sonuclar), use_container_width=True)
+            st.divider()
+            st.metric("📊 TOPLAM TARANAN", len(sonuclar))
+            st.success(f"✅ Başarılı Olanlar: {', '.join(basarili)}")
+            st.error(f"⏳ Beklemede Olanlar: {', '.join(beklemede[:30])}...")
+        else:
+            st.error("Bağlantı koptu, tekrar dene.")
+
+st.sidebar.info("850 TL sermaye ile sinyal bekle!")
